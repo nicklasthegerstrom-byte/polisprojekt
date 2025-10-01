@@ -17,5 +17,5 @@ Användaren kan välja tidsintervall, söka efter nyckelord (t.ex. "mord", "skot
 
 1. Klona projektet:
    ```bash
-   git clone https://github.com/<ditt-repo>/polisprojekt.git
+   git clone https://github.com/nicklasthegerstrom-byte/polisprojekt.git
    cd polisprojekt
