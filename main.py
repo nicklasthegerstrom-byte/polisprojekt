@@ -1,14 +1,13 @@
-from datetime import datetime, timedelta
-from api_fetch import fetch_events
-from scoring import get_seriousness
-from time_filter import filter_recent_events, format_datetime, get_time_only
-from search import search_events, search_input
+from functions.time_filter import filter_recent_events, format_datetime, get_time_only
+from data.api_fetch import fetch_events
+from data.scoring import get_seriousness
+
 
 # ----------------------------
 # Funktioner
 # ----------------------------
 
-# Hämta alla Polisens Events, sätt betyg på dem från funkion i scoring modulen:
+# Hämta alla Polisens Events, sätt betyg på dem från funktion i scoring modulen:
 
 
 def get_most_serious_events(events, min_score=7, max_score=10):
@@ -24,7 +23,9 @@ def get_most_serious_events(events, min_score=7, max_score=10):
 def get_filtered_recent_events(events, hours):
     serious_events_sorted = get_most_serious_events(events)
     recent_serious_events = filter_recent_events(serious_events_sorted, hours)
-    return recent_serious_events
+    return recent_serious_events #returnerar en filtrerad lista beroende på variabeln hours
+
+#printa med datum eller utan datum 
 
 def print_serious_all(events):
     for e in events:
@@ -45,38 +46,42 @@ events = fetch_events()
 serious_events_sorted = get_most_serious_events(events)
 
 # ----------------------------
-# Input
+# Input. Att göra :Gör en funktion i en loop så jag slipper köra filen om och om.
+#                  Rullista för att söka efter de städer (location) som finns i events.
 # ----------------------------
-print("Välj tidsperiod att visa händelser från:")
-print("1 - Senaste 3 timmar")
-print("2 - Senaste 6 timmar")
-print("3 - Senaste 12 timmar")
-print("4 - Senaste 24 timmar")
-print("5 - Alla")
-print("6 - Sök efter händelse (ex mord, explosion)")
 
-val = input("Ange nummer: ")
+def meny():
+        while True:
+            print("Välj en tidsperiod att visa viktiga händelser från:")
+            print("1 - Senaste 3 timmar")
+            print("2 - Senaste 6 timmar")
+            print("3 - Senaste 12 timmar")
+            print("4 - Senaste 24 timmar")
+            print("5 - Alla")
+            print("6 - Sök efter händelse (ex mord, explosion)")
 
-if val == "1":
-    hours = 3
-elif val == "2":
-    hours = 6
-elif val == "3":
-    hours = 12
-elif val == "4":
-    hours = 24
-elif val == "5":
-    print_serious_all(serious_events_sorted)
-    hours = None
-elif val == "6":
-    search_input(events)
-    hours = None
-else:
-    hours = 24
+            val = input("Ange nummer: ")
 
-# ----------------------------
-# Filtrera och printa efter input
-# ----------------------------
-if hours is not None:
-    recent_serious_events = get_filtered_recent_events(events, hours)
-    print_serious_time(recent_serious_events)
+            if val == "1":
+                hours = 3
+            elif val == "2":
+                hours = 6
+            elif val == "3":
+                hours = 12
+            elif val == "4":
+                hours = 24
+            elif val == "5":
+                print_serious_all(serious_events_sorted)
+                hours = None
+            elif val == "6":
+                search_input(events)
+                hours = None
+            else:
+                hours = 24
+
+            # ----------------------------
+            # Filtrera och printa efter input
+            # ----------------------------
+            if hours is not None:
+                recent_serious_events = get_filtered_recent_events(events, hours)
+                print_serious_time(recent_serious_events)    
