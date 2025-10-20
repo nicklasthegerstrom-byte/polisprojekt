@@ -1,4 +1,4 @@
-from time_filter import get_time_only, format_datetime
+from functions.time_filter import get_time_only, format_datetime
 
 
 def search_events(events, keyword):
@@ -13,7 +13,7 @@ def search_events(events, keyword):
 
 # Användning
 def search_input(events):    
-    search_word = input("Skriv ett ord att söka efter i händelser: ")
+    search_word = input("Sök i händelser: ")
     matches = search_events(events, search_word)
 
     if matches:

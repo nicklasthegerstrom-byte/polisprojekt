@@ -1,49 +1,116 @@
+from datetime import datetime, timedelta
 from functions.time_filter import filter_recent_events, format_datetime, get_time_only
 from data.api_fetch import fetch_events
-from data.scoring import get_seriousness
+from model.event_model import Event
+from functions.search import search_events, search_input
 
+# ----------------------------
+# Hämta events och sortera
+# ----------------------------
 
 # ----------------------------
 # Funktioner
 # ----------------------------
 
-# Hämta alla Polisens Events, sätt betyg på dem från funktion i scoring modulen:
+# Hämta alla Polisens Events, via Event klassen:
 
+def load_events():
+    api_data = fetch_events()
+    events = [Event(item) for item in api_data]
+    return(events)
+    
+# printa ALLA senaste 500 events (används inte):
 
-def get_most_serious_events(events, min_score=7, max_score=10):
-    for event in events:
-        event['seriousness'] = get_seriousness(event['type'])
-    serious_events = [e for e in events if min_score <= e['seriousness'] <= max_score]
-    serious_events_sorted = sorted(serious_events, key=lambda e: (e['datetime'], e['seriousness']), reverse=True)
-    return serious_events_sorted
-
-
-# Sortera ALLA händelser, nu med betyg, men efter tid också, från time_filter modulen.
-
-def get_filtered_recent_events(events, hours):
-    serious_events_sorted = get_most_serious_events(events)
-    recent_serious_events = filter_recent_events(serious_events_sorted, hours)
-    return recent_serious_events #returnerar en filtrerad lista beroende på variabeln hours
-
-#printa med datum eller utan datum 
-
-def print_serious_all(events):
+def show_all_events():
+    events = load_events()
     for e in events:
-        loc = e.get("location", {})
-        loc_name = loc.get("name", "Unknown")
-        print(f"{format_datetime(e['datetime'])}, {loc_name} | {e['type']} | {e['summary']}")
+        print(e)
+        print("-" * 40)
+            
+ #printa bara de inom en vald seriousness
 
-def print_serious_time(events):
+from datetime import datetime, timedelta
+
+def get_serious_events(hours=None, min_score=7):
+    """Return a filtered list of serious events (for Flask, GUI, etc.)."""
+    events = load_events()
+    serious_events = [e for e in events if e.seriousness >= min_score]
+
+    if hours is not None:
+        cutoff = datetime.now() - timedelta(hours=hours)
+        serious_events = [
+            e for e in serious_events if e.time and e.time >= cutoff
+        ]
+
+    return serious_events
+
+
+def show_serious_events(hours=None, min_score=7):
+    """Print events nicely in terminal (for manual checks)."""
+    events = get_serious_events(hours, min_score)
+    if not events:
+        print("⚠️ Inga händelser hittades.")
+        return
+
     for e in events:
-        loc = e.get("location", {})
-        loc_name = loc.get("name", "Unknown")
-        print(f"{get_time_only(e['datetime'])}, {loc_name} | {e['type']} - {e['summary']}")
+        print(e)
+        print("-" * 40)
 
-# ----------------------------
-# Hämta events och sortera
-# ----------------------------
-events = fetch_events()
-serious_events_sorted = get_most_serious_events(events)
+
+
+def search_events_by_word(search_term, min_score=7):
+    """Return serious events matching a word in summary or type."""
+    events = load_events()
+    search_term = search_term.lower()
+
+    matched = [
+        e for e in events
+        if e.seriousness >= min_score
+        and (
+            search_term in e.summary.lower()
+            or search_term in e.type.lower()
+        )
+    ]
+    return matched
+
+
+def search_events_by_location(location_name, min_score=7):
+    """Return serious events matching location."""
+    events = load_events()
+    location_name = location_name.lower()
+
+    matched = [
+        e for e in events
+        if e.seriousness >= min_score
+        and location_name in e.location_name.lower()
+    ]
+    return matched
+
+def show_search_by_word(search_term, min_score=7):
+    matched = search_events_by_word(search_term, min_score)
+    if not matched:
+        print(f"🚫 Inga händelser hittades för sökningen '{search_term}'.")
+        return
+    for e in matched:
+        print(e)
+        print("-" * 40)
+
+
+def show_search_by_location(location_name, min_score=7):
+    matched = search_events_by_location(location_name, min_score)
+    if not matched:
+        print(f"🚫 Inga händelser hittades för platsen '{location_name}'.")
+        return
+    for e in matched:
+        print(e)
+        print("-" * 40)
+
+
+
+
+
+        
+
 
 # ----------------------------
 # Input. Att göra :Gör en funktion i en loop så jag slipper köra filen om och om.
@@ -51,37 +118,54 @@ serious_events_sorted = get_most_serious_events(events)
 # ----------------------------
 
 def meny():
+    while True:
+        print("\nVälj en tidsperiod att visa viktiga händelser från:")
+        print("1 - Senaste 3 timmar")
+        print("2 - Senaste 6 timmar")
+        print("3 - Senaste 12 timmar")
+        print("4 - Senaste 24 timmar")
+        print("5 - Alla")
+        print("6 - Sök efter händelse (ex mord, explosion)")
+        print("7 - Sök efter plats")
+        print("8 - Avsluta")
+        val = input("Ange nummer: ")
+
+        if val == "1":
+            show_serious_events(3)
+        elif val == "2":
+            show_serious_events(6)
+        elif val == "3":
+            show_serious_events(12)
+        elif val == "4":
+            show_serious_events(24)
+        elif val == "5":
+            show_serious_events()
+        elif val == "6":
+            search_word = input("Skriv en händelse att söka efter: ")
+            search_events(search_word)
+        elif val == "7":
+            search_events_by_location()
+        elif val == "8":
+            print("Programmet avslutas.")
+            break
+        else:
+            print("Felaktig input.")
+            continue  # back to menu
+
+        # ----------------------------
+        # Pause before showing menu again
+        # ----------------------------
         while True:
-            print("Välj en tidsperiod att visa viktiga händelser från:")
-            print("1 - Senaste 3 timmar")
-            print("2 - Senaste 6 timmar")
-            print("3 - Senaste 12 timmar")
-            print("4 - Senaste 24 timmar")
-            print("5 - Alla")
-            print("6 - Sök efter händelse (ex mord, explosion)")
-
-            val = input("Ange nummer: ")
-
-            if val == "1":
-                hours = 3
-            elif val == "2":
-                hours = 6
-            elif val == "3":
-                hours = 12
-            elif val == "4":
-                hours = 24
-            elif val == "5":
-                print_serious_all(serious_events_sorted)
-                hours = None
-            elif val == "6":
-                search_input(events)
-                hours = None
+            again = input("\nVisa fler händelser / Ny fråga? (J/N): ").strip().lower()
+            if again == "j":
+                break  # goes back to menu
+            elif again == "n":
+                print("Programmet avslutas.")
+                return
             else:
-                hours = 24
+                print("Skriv J för Ja eller N för Nej.")
 
-            # ----------------------------
-            # Filtrera och printa efter input
-            # ----------------------------
-            if hours is not None:
-                recent_serious_events = get_filtered_recent_events(events, hours)
-                print_serious_time(recent_serious_events)    
+
+if __name__ == "__main__":
+    # Only run the menu if executed directly, not when imported by Flask
+    meny()
